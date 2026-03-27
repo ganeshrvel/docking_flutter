@@ -129,17 +129,20 @@ class DockingExamplePageState extends State<DockingExamplePage> {
   Color get _tabSel => _res.textFillColorPrimary;
 
   // border color for the new tab button and menu borders
-  Color get _borderColor => _tabNorm.withValues(alpha: 0.40);
+  Color get _borderColor => _navIconColor;
 
   // subtle hover background for unselected tabs
   Color get _highlightBg => _res.subtleFillColorSecondary;
+
+  // nav icon color — arrows, info icon and + button border/icon
+  Color get _navIconColor => _tabNorm.withValues(alpha: 0.70);
 
   // new tab button — bordered rounded square with accent hover state
   TabButton _addTabButton({required VoidCallback onPressed}) {
     return TabButton(
       icon: IconProvider.data(CupertinoIcons.add),
       toolTip: 'New Tab',
-      color: _tabNorm,
+      color: _navIconColor,
       hoverColor: _accent,
       padding: const EdgeInsets.all(4),
       background: BoxDecoration(
@@ -228,6 +231,7 @@ class DockingExamplePageState extends State<DockingExamplePage> {
     theme.tabsArea.disabledButtonColor = _tabNorm;
     theme.tabsArea.disabledButtonBackground = transparentBg;
     theme.tabsArea.tabWidth = 130;
+    theme.tabsArea.navIconColor = _navIconColor;
 
     // tab pill — base style for all states
     theme.tab.textStyle = TextStyle(
