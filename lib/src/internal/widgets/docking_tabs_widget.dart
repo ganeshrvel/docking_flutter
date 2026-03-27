@@ -11,11 +11,11 @@ import 'package:docking/src/on_item_close.dart';
 import 'package:docking/src/on_item_selection.dart';
 import 'package:docking/src/theme/docking_theme.dart';
 import 'package:docking/src/theme/docking_theme_data.dart';
+import 'package:fluent_ui/fluent_ui.dart' show FluentTheme;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 
-/// Represents a widget for [DockingTabs].
 class DockingTabsWidget extends StatefulWidget {
   DockingTabsWidget(
       {Key? key,
@@ -49,31 +49,56 @@ class DockingTabsWidget extends StatefulWidget {
 class DockingTabsWidgetState extends State<DockingTabsWidget>
     with DraggableConfigMixin {
   DropPosition? _activeDropPosition;
+  late TabbedViewController _controller;
 
-  /// Allow right edge drop only when there is a single pane —
-  /// i.e. root is not yet a DockingRow.
+  // TabData objects hold scrollKey and uniqueKey which Flutter uses to
+  // maintain scroll position and widget identity across rebuilds.
+  // Recreating TabData on every _syncController call would generate new
+  // keys, causing TabbedView to remount tab widgets and lose scroll state.
+  // Cache keyed by DockingItem identity so the same TabData — and its
+  // stable keys — are reused as long as the DockingItem exists in the layout.
+  final Map<DockingItem, TabData> _tabCache = {};
+
   bool get _allowRightEdgeDrop => widget.layout.root is! DockingRow;
 
   @override
-  Widget build(BuildContext context) {
-    List<TabData> tabs = [];
+  void initState() {
+    super.initState();
+
+    _controller = TabbedViewController([]);
+    _syncController();
+  }
+
+  @override
+  void didUpdateWidget(covariant DockingTabsWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncController();
+  }
+
+  void _syncController() {
+    final int totalItems =
+        widget.layout.layoutAreas().whereType<DockingItem>().length;
+    final int desiredSelectedIndex = math.min(
+        widget.dockingTabs.selectedIndex, widget.dockingTabs.childrenCount - 1);
+
+    // build desired tab list, reusing cached TabData by DockingItem identity
+    final List<TabData> desired = [];
     widget.dockingTabs.forEach((child) {
       Widget content = child.widget;
       if (child.globalKey != null) {
         content = KeyedSubtree(child: content, key: child.globalKey);
       }
+
       List<TabButton>? buttons;
       if (child.buttons != null && child.buttons!.isNotEmpty) {
-        buttons = [];
-        buttons.addAll(child.buttons!);
+        buttons = []..addAll(child.buttons!);
       }
+
       final bool maximizable = child.maximizable != null
           ? child.maximizable!
           : widget.maximizableTab;
       if (maximizable) {
-        if (buttons == null) {
-          buttons = [];
-        }
+        if (buttons == null) buttons = [];
         DockingThemeData data = DockingTheme.of(context);
         if (widget.layout.maximizedArea != null &&
             widget.layout.maximizedArea == child) {
@@ -87,32 +112,82 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
         }
       }
 
-      // Hide close button when this is the very last tab in the layout
-      final int totalItems =
-          widget.layout.layoutAreas().whereType<DockingItem>().length;
+      // close button only on the selected tab
       final bool closable = totalItems > 1 ? child.closable : false;
 
-      tabs.add(TabData(
-          value: child,
-          text: child.name != null ? child.name! : '',
-          content: content,
-          closable: closable,
-          keepAlive: child.globalKey != null,
-          leading: child.leading,
-          buttons: buttons,
-          draggable: widget.draggable));
+      if (_tabCache.containsKey(child)) {
+        // reuse existing TabData — preserves scrollKey and uniqueKey
+        final TabData existing = _tabCache[child]!;
+        existing.closable = closable;
+        existing.buttons = buttons;
+        desired.add(existing);
+      } else {
+        final TabData newTab = TabData(
+            value: child,
+            text: child.name != null ? child.name! : '',
+            content: content,
+            closable: closable,
+            keepAlive: child.globalKey != null,
+            leading: child.leading,
+            buttons: buttons,
+            draggable: widget.draggable);
+        _tabCache[child] = newTab;
+        desired.add(newTab);
+      }
     });
 
-    TabbedViewController controller = TabbedViewController(tabs);
-    controller.selectedIndex =
-        math.min(widget.dockingTabs.selectedIndex, tabs.length - 1);
+    // remove stale cache entries
+    _tabCache.removeWhere((item, _) => !desired.any((t) => t.value == item));
 
+    // remove tabs from controller that are no longer desired
+    final Set<DockingItem> desiredItems =
+        desired.map((t) => t.value as DockingItem).toSet();
+    for (int i = _controller.tabs.length - 1; i >= 0; i--) {
+      final tab = _controller.tabs[i];
+      if (!desiredItems.contains(tab.value as DockingItem)) {
+        _controller.removeTab(i);
+      }
+    }
+
+    // insert tabs that are missing from controller
+    for (int i = 0; i < desired.length; i++) {
+      final DockingItem item = desired[i].value as DockingItem;
+      final int currentIndex =
+          _controller.tabs.indexWhere((t) => t.value == item);
+      if (currentIndex == -1) {
+        _controller.insertTab(i, desired[i]);
+      }
+    }
+
+    // reorder controller tabs to match desired order
+    for (int i = 0; i < desired.length; i++) {
+      final int current =
+          _controller.tabs.indexWhere((t) => t.value == desired[i].value);
+      if (current != -1 && current != i) {
+        _controller.reorderTab(current, i);
+      }
+    }
+
+    // only update selectedIndex if it actually changed to avoid
+    // spurious notifyListeners triggering scroll on other panes
+    final int newSelectedIndex =
+        math.min(desiredSelectedIndex, _controller.tabs.length - 1);
+    if (_controller.selectedIndex != newSelectedIndex) {
+      _controller.selectedIndex = newSelectedIndex;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     Widget tabbedView = TabbedView(
-        controller: controller,
+        controller: _controller,
+        anyDragActive: widget.dragOverPosition,
         tabsAreaButtonsBuilder: _tabsAreaButtonsBuilder,
+        selectToEnableButtons: false,
         onTabSelection: (int? index) {
           if (index != null) {
             widget.dockingTabs.selectedIndex = index;
+            setState(() {}); // force rebuild so correct tab gets close button
             if (widget.onItemSelection != null) {
               widget.onItemSelection!(widget.dockingTabs.childAt(index));
             }
@@ -122,7 +197,10 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
         onDraggableBuild: widget.draggable
             ? (TabbedViewController controller, int tabIndex, TabData tabData) {
                 return buildDraggableConfig(
-                    dockingDrag: widget.dragOverPosition, tabData: tabData);
+                  dockingDrag: widget.dragOverPosition,
+                  tabData: tabData,
+                  context: context,
+                );
               }
             : null,
         onTabClose: _onTabClose,
@@ -131,14 +209,21 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
             layout: widget.layout,
             dockingTabs: widget.dockingTabs,
             allowRightEdgeDrop: _allowRightEdgeDrop,
-            child: controller.tabs[tabIndex].content!),
+            child: _controller.tabs[tabIndex].content!),
         onBeforeDropAccept: widget.draggable ? _onBeforeDropAccept : null);
 
-    if (widget.draggable && widget.dragOverPosition.enable) {
-      return DropFeedbackWidget(
-          dropPosition: _activeDropPosition, child: tabbedView);
-    }
-    return tabbedView;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: DropFeedbackWidget(
+        dropPosition: widget.draggable && widget.dragOverPosition.enable
+            ? _activeDropPosition
+            : null,
+        accentColor: FluentTheme.of(context)
+            .accentColor
+            .defaultBrushFor(FluentTheme.of(context).brightness),
+        child: tabbedView,
+      ),
+    );
   }
 
   void _updateActiveDropPosition(DropPosition? dropPosition) {
@@ -160,6 +245,16 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
         draggedItem: dockingItem,
         targetArea: widget.dockingTabs,
         dropIndex: newIndex);
+    // find the dropped item's actual index after layout rebuild
+    final areas = widget.layout.layoutAreas().whereType<DockingTabs>();
+    for (final area in areas) {
+      for (int i = 0; i < area.childrenCount; i++) {
+        if (area.childAt(i).id == dockingItem.id) {
+          area.selectedIndex = i;
+          break;
+        }
+      }
+    }
     return true;
   }
 

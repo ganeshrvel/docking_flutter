@@ -9,6 +9,7 @@ import 'package:docking/src/on_item_close.dart';
 import 'package:docking/src/on_item_selection.dart';
 import 'package:docking/src/theme/docking_theme.dart';
 import 'package:docking/src/theme/docking_theme_data.dart';
+import 'package:fluent_ui/fluent_ui.dart' show FluentTheme;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:meta/meta.dart';
@@ -68,7 +69,6 @@ class DockingItemWidgetState extends State<DockingItemWidget>
         buttons = [];
       }
       DockingThemeData data = DockingTheme.of(context);
-
       if (widget.layout.maximizedArea != null &&
           widget.layout.maximizedArea == widget.item) {
         buttons.add(TabButton(
@@ -110,10 +110,15 @@ class DockingItemWidgetState extends State<DockingItemWidget>
         tabCloseInterceptor: _tabCloseInterceptor,
         onTabClose: _onTabClose,
         controller: controller,
+        anyDragActive: widget.dragOverPosition,
+        selectToEnableButtons: false,
         onDraggableBuild: widget.draggable
             ? (TabbedViewController controller, int tabIndex, TabData tabData) {
                 return buildDraggableConfig(
-                    dockingDrag: widget.dragOverPosition, tabData: tabData);
+                  dockingDrag: widget.dragOverPosition,
+                  tabData: tabData,
+                  context: context,
+                );
               }
             : null,
         contentBuilder: (context, tabIndex) => ItemContentWrapper(
@@ -122,20 +127,33 @@ class DockingItemWidgetState extends State<DockingItemWidget>
             dockingItem: widget.item,
             child: controller.tabs[tabIndex].content!),
         onBeforeDropAccept: widget.draggable ? _onBeforeDropAccept : null);
-    if (widget.draggable && widget.dragOverPosition.enable) {
-      return DropFeedbackWidget(
-          dropPosition: _activeDropPosition, child: tabbedView);
-    }
-    return tabbedView;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: DropFeedbackWidget(
+        dropPosition: widget.draggable && widget.dragOverPosition.enable
+            ? _activeDropPosition
+            : null,
+        accentColor: FluentTheme.of(context)
+            .accentColor
+            .defaultBrushFor(FluentTheme.of(context).brightness),
+        child: tabbedView,
+      ),
+    );
   }
 
   bool _onBeforeDropAccept(
       DraggableData source, TabbedViewController target, int newIndex) {
     DockingItem dockingItem = source.tabData.value;
     if (dockingItem != widget.item) {
+      // widget.item may be wrapped in a DockingTabs when remove_item.dart
+      // preserves the single-child wrapper — targeting the bare DockingItem
+      // directly would throw "nested tabbed panels are not allowed".
+      // findDockingTabsWithItem resolves the parent DockingTabs if it exists.
+      final parentTabs = widget.layout.findDockingTabsWithItem(widget.item.id);
       widget.layout.moveItem(
           draggedItem: dockingItem,
-          targetArea: widget.item,
+          targetArea: (parentTabs ?? widget.item) as DropArea,
           dropIndex: newIndex);
     }
     return true;

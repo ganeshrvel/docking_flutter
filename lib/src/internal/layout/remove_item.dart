@@ -44,15 +44,27 @@ class RemoveItem extends LayoutModifier {
         }
       });
       if (children.length == 1) {
-        return children.first;
+        DockingTabs newDockingTabs = DockingTabs(children,
+            id: dockingTabs.id,
+            maximized: dockingTabs.maximized,
+            maximizable: dockingTabs.maximizable,
+            weight: dockingTabs.weight,
+            minimalWeight: dockingTabs.minimalWeight,
+            minimalSize: dockingTabs.minimalSize);
+        newDockingTabs.selectedIndex = 0;
+        return newDockingTabs;
       }
+
       if (children.isEmpty) {
         return null;
       }
       DockingTabs newDockingTabs = DockingTabs(children,
           id: dockingTabs.id,
           maximized: dockingTabs.maximized,
-          maximizable: dockingTabs.maximizable);
+          maximizable: dockingTabs.maximizable,
+          weight: dockingTabs.weight,
+          minimalWeight: dockingTabs.minimalWeight,
+          minimalSize: dockingTabs.minimalSize);
       newDockingTabs.selectedIndex = dockingTabs.selectedIndex;
       return newDockingTabs;
     } else if (area is DockingParentArea) {
@@ -69,9 +81,17 @@ class RemoveItem extends LayoutModifier {
         return children.first;
       }
       if (area is DockingRow) {
-        return DockingRow(children, id: area.id);
+        return DockingRow(children,
+            id: area.id,
+            weight: area.weight,
+            minimalWeight: area.minimalWeight,
+            minimalSize: area.minimalSize);
       } else if (area is DockingColumn) {
-        return DockingColumn(children, id: area.id);
+        return DockingColumn(children,
+            id: area.id,
+            weight: area.weight,
+            minimalWeight: area.minimalWeight,
+            minimalSize: area.minimalSize);
       }
       throw ArgumentError(
           'DockingArea class not recognized: ' + area.runtimeType.toString());

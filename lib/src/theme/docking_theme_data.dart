@@ -1,4 +1,5 @@
 import 'package:docking/src/docking_icons.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 
@@ -11,7 +12,7 @@ class DockingThemeData {
             : IconProvider.path(DockingIcons.restore),
         this.maximizeIcon = maximizeIcon != null
             ? maximizeIcon
-            : IconProvider.data(Icons.web_asset_sharp);
+            : IconProvider.data(CupertinoIcons.macwindow);
 
   /// Icon for the restore button.
   IconProvider restoreIcon;

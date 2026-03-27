@@ -3,6 +3,7 @@ description: Flutter layout for placing widgets in docking areas and arrange the
 version: 1.16.2
 homepage: https://caduandrade.github.io/docking_flutter/
 repository: https://github.com/caduandrade/docking_flutter
+publish_to: none
 
 environment:
   sdk: ">=2.12.0 <4.0.0"
@@ -12,10 +13,22 @@ dependencies:
   flutter:
     sdk: flutter
   meta: ^1.7.0
-  tabbed_view: '>=1.18.0 <1.19.0'
-    #path: ../tabbed_view/
+#  tabbed_view: '>=1.18.0 <1.19.0'
+#    #path: ../tabbed_view/
   multi_split_view: '>=2.4.0 <2.5.0'
     #path: ../multi_split_view/
+
+  cupertino_icons: ^1.0.8
+
+  fluent_ui:
+    git:
+      url: https://github.com/ganeshrvel/fluent_ui.git
+      ref: openmtp
+
+  tabbed_view:
+    git:
+      url: https://github.com/ganeshrvel/tabbed_view.git
+      ref: openmtp
 
 dev_dependencies:
   flutter_test:

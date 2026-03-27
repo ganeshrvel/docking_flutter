@@ -55,10 +55,17 @@ abstract class DockingArea extends Area {
 
   bool get disposed => _disposed;
 
-  Key _key = UniqueKey();
+  // fallback key for areas without an explicit id — late final ensures
+  // it is created once and remains stable for this object's lifetime.
+  // only used when id is null; in practice all dynamic areas get an id
+  // via DockingLayout.generateAreaId() so this path is rarely hit.
+  late final Key _stableKey = UniqueKey();
 
+  // returns a ValueKey based on the string id when available,
+  // giving Flutter a stable identity across _rebuild() calls.
+  // falls back to _stableKey if no id is set.
   @internal
-  Key get key => _key;
+  Key get key => id != null ? ValueKey(id) : _stableKey;
 
   /// Disposes.
   void _dispose() {
@@ -484,6 +491,13 @@ class DockingLayout extends ChangeNotifier {
 
   /// The id of this layout.
   int get id => this.hashCode;
+
+  // increments on each call — ensures every dynamically created
+  // DockingTabs, DockingRow or DockingColumn gets a unique stable id
+  // so Flutter can reuse widgets across rebuilds instead of remounting
+  int _areaIdCounter = 0;
+
+  String generateAreaId() => 'docking_area_${hashCode}_${_areaIdCounter++}';
 
   /// The protected root of this layout.
   DockingArea? _root;

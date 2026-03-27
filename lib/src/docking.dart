@@ -112,9 +112,15 @@ class _DockingState extends State<Docking> {
     } else if (area is DockingColumn) {
       return _column(context, area);
     } else if (area is DockingTabs) {
+      // When a DockingTabs has exactly one child, we render DockingItemWidget instead
+      // of DockingTabsWidget to avoid the overhead of a full tab strip for a single tab.
+      // The keys use the same area.id but different prefixes (tabs_item_ vs tabs_) so
+      // Flutter correctly remounts the widget when the pane transitions between single
+      // and multi-tab state — without this, Flutter would try to reuse DockingItemWidget
+      // as DockingTabsWidget due to same tree position, causing type mismatch errors.
       if (area.childrenCount == 1) {
         return DockingItemWidget(
-            key: area.key,
+            key: ValueKey('tabs_item_${area.id}'),
             layout: widget.layout!,
             dragOverPosition: _dragOverPosition,
             draggable: widget.draggable,
@@ -126,7 +132,7 @@ class _DockingState extends State<Docking> {
             maximizable: widget.maximizableItem);
       }
       return DockingTabsWidget(
-          key: area.key,
+          key: ValueKey('tabs_${area.id}'),
           layout: widget.layout!,
           dragOverPosition: _dragOverPosition,
           draggable: widget.draggable,
@@ -147,7 +153,6 @@ class _DockingState extends State<Docking> {
     row.forEach((child) {
       children.add(_buildArea(context, child));
     });
-
     return MultiSplitView(
         key: row.key,
         children: children,
@@ -161,7 +166,6 @@ class _DockingState extends State<Docking> {
     column.forEach((child) {
       children.add(_buildArea(context, child));
     });
-
     return MultiSplitView(
         key: column.key,
         children: children,

@@ -1,0 +1,9 @@
+# 1. Copy this file to "pubspec_overrides.yaml" in the project root.
+# 2. Ensure "pubspec_overrides.yaml" is listed in .gitignore and is NOT committed. ⚠️
+# 3. Set the relative path inside "pubspec_overrides.yaml" for each package you want to override.
+
+dependency_overrides:
+  fluent_ui:
+    path: ../../relative/path/to/fluent_ui # set the relative path to your local copy
+  tabbed_view:
+    path: ../../relative/path/to/tabbed_view

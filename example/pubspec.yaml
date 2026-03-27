@@ -23,6 +23,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  fluent_ui:
+    git:
+      url: https://github.com/ganeshrvel/fluent_ui.git
+      ref: openmtp
+
+  system_theme: ^3.2.0
+
   docking: #^1.11.0
     path: ../
   #tabbed_view: ^1.16.0

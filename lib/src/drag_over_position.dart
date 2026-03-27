@@ -1,12 +1,11 @@
 import 'package:flutter/widgets.dart';
 
-class DragOverPosition extends ChangeNotifier {
-  bool _enable = false;
+class DragOverPosition extends ValueNotifier<bool> {
+  DragOverPosition() : super(false);
 
-  bool get enable => _enable;
+  bool get enable => value;
 
-  set enable(bool value) {
-    _enable = value;
-    notifyListeners();
+  set enable(bool newValue) {
+    value = newValue;
   }
 }
