@@ -118,6 +118,7 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
       if (_tabCache.containsKey(child)) {
         // reuse existing TabData — preserves scrollKey and uniqueKey
         final TabData existing = _tabCache[child]!;
+        existing.text = child.name != null ? child.name! : '';
         existing.closable = closable;
         existing.buttons = buttons;
         desired.add(existing);
