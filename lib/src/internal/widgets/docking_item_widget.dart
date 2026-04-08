@@ -10,9 +10,9 @@ import 'package:docking/src/on_item_selection.dart';
 import 'package:docking/src/theme/docking_theme.dart';
 import 'package:docking/src/theme/docking_theme_data.dart';
 import 'package:fluent_ui/fluent_ui.dart' show FluentTheme;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:meta/meta.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 
 /// Represents a widget for [DockingItem].
@@ -28,7 +28,8 @@ class DockingItemWidget extends StatefulWidget {
       this.itemCloseInterceptor,
       this.dockingButtonsBuilder,
       required this.maximizable,
-      required this.draggable})
+      required this.draggable,
+      this.focusedItemId})
       : super(key: key);
 
   final DockingLayout layout;
@@ -41,6 +42,12 @@ class DockingItemWidget extends StatefulWidget {
   final DragOverPosition dragOverPosition;
   final bool draggable;
 
+  /// The id of the globally focused docking item across all panes.
+  ///
+  /// Used to suppress the accent highlight on this item's tab when it
+  /// is not the globally focused tab.
+  final ValueListenable<String?>? focusedItemId;
+
   @override
   State<StatefulWidget> createState() => DockingItemWidgetState();
 }
@@ -48,6 +55,60 @@ class DockingItemWidget extends StatefulWidget {
 class DockingItemWidgetState extends State<DockingItemWidget>
     with DraggableConfigMixin {
   DropPosition? _activeDropPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.focusedItemId?.addListener(_onFocusedItemChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.focusedItemId?.removeListener(_onFocusedItemChanged);
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant DockingItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusedItemId != widget.focusedItemId) {
+      oldWidget.focusedItemId?.removeListener(_onFocusedItemChanged);
+      widget.focusedItemId?.addListener(_onFocusedItemChanged);
+    }
+  }
+
+  void _onFocusedItemChanged() {
+    if (!mounted) return;
+    Future.microtask(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  // true when this item is the globally focused tab
+  bool get _thisItemIsFocused {
+    final focusedId = widget.focusedItemId?.value;
+    if (focusedId == null) return false;
+    return widget.item.id == focusedId;
+  }
+
+  // builds a neutral theme for non-focused panes — selected tab uses the
+  // hover style (subtle bg, normal text) instead of accent so only the
+  // globally focused pane shows the full accent highlight
+  TabbedViewThemeData _buildNeutralTheme(TabbedViewThemeData source) {
+    return source.copyWith(
+      tab: source.tab.copyWith(
+        selectedStatus: source.tab.selectedStatus.copyWith(
+          decoration: source.tab.highlightedStatus.decoration,
+          fontColor: source.tab.textStyle?.color,
+          normalButtonColor: source.tab.highlightedStatus.normalButtonColor,
+          hoverButtonColor: source.tab.highlightedStatus.hoverButtonColor,
+          disabledButtonColor: Colors.transparent,
+          hoverButtonBackground:
+              source.tab.highlightedStatus.hoverButtonBackground,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,18 +156,17 @@ class DockingItemWidgetState extends State<DockingItemWidget>
     ];
     TabbedViewController controller = TabbedViewController(tabs);
 
-    OnTabSelection? onTabSelection;
+    OnTabSelection? onTabTap;
     if (widget.onItemSelection != null) {
-      onTabSelection = (int? index) {
-        if (index != null) {
-          widget.onItemSelection!(widget.item);
-        }
+      onTabTap = (int? index) {
+        widget.onItemSelection!(widget.item);
       };
     }
 
     Widget tabbedView = TabbedView(
         tabsAreaButtonsBuilder: _tabsAreaButtonsBuilder,
-        onTabSelection: onTabSelection,
+        onTabSelection: null,
+        onTabTap: onTabTap,
         tabCloseInterceptor: _tabCloseInterceptor,
         onTabClose: _onTabClose,
         controller: controller,
@@ -128,7 +188,7 @@ class DockingItemWidgetState extends State<DockingItemWidget>
             child: controller.tabs[tabIndex].content!),
         onBeforeDropAccept: widget.draggable ? _onBeforeDropAccept : null);
 
-    return ClipRRect(
+    final Widget clipped = ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: DropFeedbackWidget(
         dropPosition: widget.draggable && widget.dragOverPosition.enable
@@ -139,6 +199,18 @@ class DockingItemWidgetState extends State<DockingItemWidget>
             .defaultBrushFor(FluentTheme.of(context).brightness),
         child: tabbedView,
       ),
+    );
+
+    // TabbedViewTheme is always present in the tree regardless of focus state.
+    // Conditionally inserting or removing TabbedViewTheme would change the
+    // widget tree structure, causing TabbedView and TabsArea to remount and
+    // lose their ScrollController state — resetting the tab strip scroll
+    // position to zero on every focus change. Only the theme data is swapped.
+    return TabbedViewTheme(
+      data: _thisItemIsFocused
+          ? TabbedViewTheme.of(context)
+          : _buildNeutralTheme(TabbedViewTheme.of(context)),
+      child: clipped,
     );
   }
 
@@ -155,6 +227,21 @@ class DockingItemWidgetState extends State<DockingItemWidget>
           draggedItem: dockingItem,
           targetArea: (parentTabs ?? widget.item) as DropArea,
           dropIndex: newIndex);
+
+      // after move, find the pane that now contains the dropped item and
+      // select it so the dropped tab becomes active in the destination pane
+      final areas = widget.layout.layoutAreas().whereType<DockingTabs>();
+      for (final area in areas) {
+        for (int i = 0; i < area.childrenCount; i++) {
+          if (area.childAt(i).id == dockingItem.id) {
+            area.selectedIndex = i;
+            if (widget.onItemSelection != null) {
+              widget.onItemSelection!(dockingItem);
+            }
+            break;
+          }
+        }
+      }
     }
     return true;
   }

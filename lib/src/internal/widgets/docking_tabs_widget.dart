@@ -12,6 +12,7 @@ import 'package:docking/src/on_item_selection.dart';
 import 'package:docking/src/theme/docking_theme.dart';
 import 'package:docking/src/theme/docking_theme_data.dart';
 import 'package:fluent_ui/fluent_ui.dart' show FluentTheme;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:tabbed_view/tabbed_view.dart';
@@ -28,7 +29,8 @@ class DockingTabsWidget extends StatefulWidget {
       this.dockingButtonsBuilder,
       required this.maximizableTab,
       required this.maximizableTabsArea,
-      required this.draggable})
+      required this.draggable,
+      this.focusedItemId})
       : super(key: key);
 
   final DockingLayout layout;
@@ -41,6 +43,12 @@ class DockingTabsWidget extends StatefulWidget {
   final bool maximizableTabsArea;
   final DragOverPosition dragOverPosition;
   final bool draggable;
+
+  /// The id of the globally focused docking item across all panes.
+  ///
+  /// Used to determine whether this pane owns the focused tab so the
+  /// selected tab accent highlight is only shown in the focused pane.
+  final ValueListenable<String?>? focusedItemId;
 
   @override
   State<StatefulWidget> createState() => DockingTabsWidgetState();
@@ -61,18 +69,45 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
 
   bool get _allowRightEdgeDrop => widget.layout.root is! DockingRow;
 
+  // true when one of this pane's tabs matches the globally focused tab id
+  bool get _thisPaneContainsFocusedTab {
+    final focusedId = widget.focusedItemId?.value;
+    if (focusedId == null) return false;
+    for (var i = 0; i < widget.dockingTabs.childrenCount; i++) {
+      if (widget.dockingTabs.childAt(i).id == focusedId) return true;
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
-
+    widget.focusedItemId?.addListener(_onFocusedItemChanged);
     _controller = TabbedViewController([]);
     _syncController();
   }
 
   @override
+  void dispose() {
+    widget.focusedItemId?.removeListener(_onFocusedItemChanged);
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(covariant DockingTabsWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusedItemId != widget.focusedItemId) {
+      oldWidget.focusedItemId?.removeListener(_onFocusedItemChanged);
+      widget.focusedItemId?.addListener(_onFocusedItemChanged);
+    }
     _syncController();
+  }
+
+  void _onFocusedItemChanged() {
+    if (!mounted) return;
+    Future.microtask(() {
+      if (mounted) setState(() {});
+    });
   }
 
   void _syncController() {
@@ -150,12 +185,17 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
       }
     }
 
-    // insert tabs that are missing from controller
+    // insert tabs that are missing from controller, or replace if TabData
+    // identity differs — occurs after cross-pane drag where the controller
+    // retains the source pane's TabData while the cache has a new instance
     for (int i = 0; i < desired.length; i++) {
       final DockingItem item = desired[i].value as DockingItem;
       final int currentIndex =
           _controller.tabs.indexWhere((t) => t.value == item);
       if (currentIndex == -1) {
+        _controller.insertTab(i, desired[i]);
+      } else if (!identical(_controller.tabs[currentIndex], desired[i])) {
+        _controller.removeTab(currentIndex);
         _controller.insertTab(i, desired[i]);
       }
     }
@@ -169,18 +209,37 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
       }
     }
 
-    // only update selectedIndex if it actually changed to avoid
-    // spurious notifyListeners triggering scroll on other panes
-    final int newSelectedIndex =
-        math.min(desiredSelectedIndex, _controller.tabs.length - 1);
-    if (_controller.selectedIndex != newSelectedIndex) {
-      _controller.selectedIndex = newSelectedIndex;
+    if (_controller.tabs.isNotEmpty) {
+      final int newSelectedIndex =
+          desiredSelectedIndex.clamp(0, _controller.tabs.length - 1);
+      if (_controller.selectedIndex != newSelectedIndex) {
+        _controller.selectedIndex = newSelectedIndex;
+      }
     }
+  }
+
+  // builds a neutral theme for non-focused panes — selected tab uses the
+  // hover style (subtle bg, normal text) instead of accent so only the
+  // globally focused pane shows the full accent highlight
+  TabbedViewThemeData _buildNeutralTheme(TabbedViewThemeData source) {
+    return source.copyWith(
+      tab: source.tab.copyWith(
+        selectedStatus: source.tab.selectedStatus.copyWith(
+          decoration: source.tab.highlightedStatus.decoration,
+          fontColor: source.tab.textStyle?.color,
+          normalButtonColor: source.tab.highlightedStatus.normalButtonColor,
+          hoverButtonColor: source.tab.highlightedStatus.hoverButtonColor,
+          disabledButtonColor: Colors.transparent,
+          hoverButtonBackground:
+              source.tab.highlightedStatus.hoverButtonBackground,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget tabbedView = TabbedView(
+    final Widget tabbedView = TabbedView(
         controller: _controller,
         anyDragActive: widget.dragOverPosition,
         tabsAreaButtonsBuilder: _tabsAreaButtonsBuilder,
@@ -188,10 +247,12 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
         onTabSelection: (int? index) {
           if (index != null) {
             widget.dockingTabs.selectedIndex = index;
-            setState(() {}); // force rebuild so correct tab gets close button
-            if (widget.onItemSelection != null) {
-              widget.onItemSelection!(widget.dockingTabs.childAt(index));
-            }
+            setState(() {});
+          }
+        },
+        onTabTap: (int? index) {
+          if (index != null && widget.onItemSelection != null) {
+            widget.onItemSelection!(widget.dockingTabs.childAt(index));
           }
         },
         tabCloseInterceptor: _tabCloseInterceptor,
@@ -213,7 +274,7 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
             child: _controller.tabs[tabIndex].content!),
         onBeforeDropAccept: widget.draggable ? _onBeforeDropAccept : null);
 
-    return ClipRRect(
+    final Widget clipped = ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: DropFeedbackWidget(
         dropPosition: widget.draggable && widget.dragOverPosition.enable
@@ -224,6 +285,18 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
             .defaultBrushFor(FluentTheme.of(context).brightness),
         child: tabbedView,
       ),
+    );
+
+    // TabbedViewTheme is always present in the tree regardless of focus state.
+    // Conditionally inserting or removing TabbedViewTheme would change the
+    // widget tree structure, causing TabbedView and TabsArea to remount and
+    // lose their ScrollController state — resetting the tab strip scroll
+    // position to zero on every focus change. Only the theme data is swapped.
+    return TabbedViewTheme(
+      data: _thisPaneContainsFocusedTab
+          ? TabbedViewTheme.of(context)
+          : _buildNeutralTheme(TabbedViewTheme.of(context)),
+      child: clipped,
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:docking/src/internal/widgets/docking_tabs_widget.dart';
 import 'package:docking/src/layout/docking_layout.dart';
 import 'package:docking/src/on_item_close.dart';
 import 'package:docking/src/on_item_selection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:multi_split_view/multi_split_view.dart';
@@ -22,7 +23,8 @@ class Docking extends StatefulWidget {
       this.maximizableTab = false,
       this.maximizableTabsArea = false,
       this.antiAliasingWorkaround = true,
-      this.draggable = true})
+      this.draggable = true,
+      this.focusedItemId})
       : super(key: key);
 
   final DockingLayout? layout;
@@ -35,6 +37,14 @@ class Docking extends StatefulWidget {
   final bool maximizableTabsArea;
   final bool antiAliasingWorkaround;
   final bool draggable;
+
+  /// The id of the globally focused docking item across all panes.
+  ///
+  /// When provided, each [DockingItemWidget] and [DockingTabsWidget] uses this
+  /// to determine whether it owns the focused tab and adjusts its selected tab
+  /// visual accordingly — only the pane containing the focused tab shows the
+  /// accent highlight.
+  final ValueListenable<String?>? focusedItemId;
 
   @override
   State<StatefulWidget> createState() => _DockingState();
@@ -106,7 +116,8 @@ class _DockingState extends State<Docking> {
           itemCloseInterceptor: widget.itemCloseInterceptor,
           onItemClose: widget.onItemClose,
           dockingButtonsBuilder: widget.dockingButtonsBuilder,
-          maximizable: widget.maximizableItem);
+          maximizable: widget.maximizableItem,
+          focusedItemId: widget.focusedItemId);
     } else if (area is DockingRow) {
       return _row(context, area);
     } else if (area is DockingColumn) {
@@ -129,7 +140,8 @@ class _DockingState extends State<Docking> {
             itemCloseInterceptor: widget.itemCloseInterceptor,
             onItemClose: widget.onItemClose,
             dockingButtonsBuilder: widget.dockingButtonsBuilder,
-            maximizable: widget.maximizableItem);
+            maximizable: widget.maximizableItem,
+            focusedItemId: widget.focusedItemId);
       }
       return DockingTabsWidget(
           key: ValueKey('tabs_${area.id}'),
@@ -142,7 +154,8 @@ class _DockingState extends State<Docking> {
           itemCloseInterceptor: widget.itemCloseInterceptor,
           dockingButtonsBuilder: widget.dockingButtonsBuilder,
           maximizableTab: widget.maximizableTab,
-          maximizableTabsArea: widget.maximizableTabsArea);
+          maximizableTabsArea: widget.maximizableTabsArea,
+          focusedItemId: widget.focusedItemId);
     }
     throw UnimplementedError(
         'Unrecognized runtimeType: ' + area.runtimeType.toString());
@@ -175,8 +188,6 @@ class _DockingState extends State<Docking> {
   }
 
   void _forceRebuild() {
-    setState(() {
-      // just rebuild
-    });
+    setState(() {});
   }
 }
