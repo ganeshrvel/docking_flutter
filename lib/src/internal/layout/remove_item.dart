@@ -37,24 +37,14 @@ class RemoveItem extends LayoutModifier {
       return dockingItem;
     } else if (area is DockingTabs) {
       DockingTabs dockingTabs = area;
+      final int newSelectedIndex =
+          dockingTabs.selectedIndexAfterRemoval(itemToRemove.id);
       List<DockingItem> children = [];
       dockingTabs.forEach((child) {
         if (child != itemToRemove) {
           children.add(child);
         }
       });
-      if (children.length == 1) {
-        DockingTabs newDockingTabs = DockingTabs(children,
-            id: dockingTabs.id,
-            maximized: dockingTabs.maximized,
-            maximizable: dockingTabs.maximizable,
-            weight: dockingTabs.weight,
-            minimalWeight: dockingTabs.minimalWeight,
-            minimalSize: dockingTabs.minimalSize);
-        newDockingTabs.selectedIndex = 0;
-        return newDockingTabs;
-      }
-
       if (children.isEmpty) {
         return null;
       }
@@ -65,7 +55,8 @@ class RemoveItem extends LayoutModifier {
           weight: dockingTabs.weight,
           minimalWeight: dockingTabs.minimalWeight,
           minimalSize: dockingTabs.minimalSize);
-      newDockingTabs.selectedIndex = dockingTabs.selectedIndex;
+      newDockingTabs.selectedIndex =
+          newSelectedIndex.clamp(0, children.length - 1);
       return newDockingTabs;
     } else if (area is DockingParentArea) {
       List<DockingArea> children = [];

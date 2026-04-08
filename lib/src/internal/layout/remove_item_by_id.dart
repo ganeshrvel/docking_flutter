@@ -27,20 +27,22 @@ class RemoveItemById extends LayoutModifier {
       return dockingItem;
     } else if (area is DockingTabs) {
       DockingTabs dockingTabs = area;
+      final int newSelectedIndex = dockingTabs.selectedIndexAfterRemoval(id);
       List<DockingItem> children = [];
       dockingTabs.forEach((child) {
         if (child.id != id) {
           children.add(child);
         }
       });
-      if (children.length == 1) {
-        return children.first;
+      if (children.isEmpty) {
+        return null;
       }
       DockingTabs newDockingTabs = DockingTabs(children,
           id: dockingTabs.id,
           maximized: dockingTabs.maximized,
           maximizable: dockingTabs.maximizable);
-      newDockingTabs.selectedIndex = dockingTabs.selectedIndex;
+      newDockingTabs.selectedIndex =
+          newSelectedIndex.clamp(0, children.length - 1);
       return newDockingTabs;
     } else if (area is DockingParentArea) {
       List<DockingArea> children = [];

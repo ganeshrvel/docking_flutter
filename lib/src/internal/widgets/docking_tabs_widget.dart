@@ -212,6 +212,7 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
     if (_controller.tabs.isNotEmpty) {
       final int newSelectedIndex =
           desiredSelectedIndex.clamp(0, _controller.tabs.length - 1);
+
       if (_controller.selectedIndex != newSelectedIndex) {
         _controller.selectedIndex = newSelectedIndex;
       }
@@ -320,15 +321,7 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
         targetArea: widget.dockingTabs,
         dropIndex: newIndex);
     // find the dropped item's actual index after layout rebuild
-    final areas = widget.layout.layoutAreas().whereType<DockingTabs>();
-    for (final area in areas) {
-      for (int i = 0; i < area.childrenCount; i++) {
-        if (area.childAt(i).id == dockingItem.id) {
-          area.selectedIndex = i;
-          break;
-        }
-      }
-    }
+    widget.layout.selectItemById(dockingItem.id);
     return true;
   }
 
@@ -366,9 +359,10 @@ class DockingTabsWidgetState extends State<DockingTabsWidget>
 
   void _onTabClose(int tabIndex, TabData tabData) {
     DockingItem dockingItem = widget.dockingTabs.childAt(tabIndex);
+    final DockingTabs sourcePane = widget.dockingTabs;
     widget.layout.removeItem(item: dockingItem);
     if (widget.onItemClose != null) {
-      widget.onItemClose!(dockingItem);
+      widget.onItemClose!(dockingItem, sourcePane);
     }
   }
 }

@@ -433,6 +433,29 @@ class DockingColumn extends DockingParentArea {
 /// Represents an area for a collection of widgets.
 /// Children will be arranged in tabs.
 class DockingTabs extends DockingParentArea with DropArea {
+  // computes the correct selectedIndex after removing the item with the
+  // given id. if the removed item was before the current selection, the
+  // index shifts down by one. if it was the current selection, the index
+  // moves to the previous sibling, or stays at 0 if it was first.
+  // returns the current selectedIndex unchanged if the id is not found.
+  int selectedIndexAfterRemoval(dynamic removedItemId) {
+    int removedIndex = -1;
+    for (int i = 0; i < childrenCount; i++) {
+      if (childAt(i).id == removedItemId) {
+        removedIndex = i;
+        break;
+      }
+    }
+    if (removedIndex == -1) return selectedIndex;
+    final int remaining = childrenCount - 1;
+    if (remaining == 0) return 0;
+    if (removedIndex < selectedIndex) return selectedIndex - 1;
+    if (removedIndex == selectedIndex) {
+      return (selectedIndex - 1).clamp(0, remaining - 1);
+    }
+    return selectedIndex;
+  }
+
   /// Builds a [DockingTabs].
   DockingTabs(List<DockingItem> children,
       {dynamic id,
@@ -591,6 +614,19 @@ class DockingLayout extends ChangeNotifier {
   /// Finds a [DockingArea] given an id.
   DockingArea? findDockingArea(dynamic id) {
     return _findDockingArea(area: _root, id: id);
+  }
+
+  // finds the pane containing the item with the given id and sets its
+  // selectedIndex to that item's position within the pane
+  void selectItemById(dynamic itemId) {
+    for (final area in layoutAreas().whereType<DockingTabs>()) {
+      for (int i = 0; i < area.childrenCount; i++) {
+        if (area.childAt(i).id == itemId) {
+          area.selectedIndex = i;
+          return;
+        }
+      }
+    }
   }
 
   /// Recursively finds a [DockingArea] given an id.

@@ -230,17 +230,9 @@ class DockingItemWidgetState extends State<DockingItemWidget>
 
       // after move, find the pane that now contains the dropped item and
       // select it so the dropped tab becomes active in the destination pane
-      final areas = widget.layout.layoutAreas().whereType<DockingTabs>();
-      for (final area in areas) {
-        for (int i = 0; i < area.childrenCount; i++) {
-          if (area.childAt(i).id == dockingItem.id) {
-            area.selectedIndex = i;
-            if (widget.onItemSelection != null) {
-              widget.onItemSelection!(dockingItem);
-            }
-            break;
-          }
-        }
+      widget.layout.selectItemById(dockingItem.id);
+      if (widget.onItemSelection != null) {
+        widget.onItemSelection!(dockingItem);
       }
     }
     return true;
@@ -275,7 +267,7 @@ class DockingItemWidgetState extends State<DockingItemWidget>
   void _onTabClose(int tabIndex, TabData tabData) {
     widget.layout.removeItem(item: widget.item);
     if (widget.onItemClose != null) {
-      widget.onItemClose!(widget.item);
+      widget.onItemClose!(widget.item, null);
     }
   }
 }
