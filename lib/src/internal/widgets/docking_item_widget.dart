@@ -194,9 +194,7 @@ class DockingItemWidgetState extends State<DockingItemWidget>
         dropPosition: widget.draggable && widget.dragOverPosition.enable
             ? _activeDropPosition
             : null,
-        accentColor: FluentTheme.of(context)
-            .accentColor
-            .defaultBrushFor(FluentTheme.of(context).brightness),
+        accentColor: FluentTheme.of(context).accentColor.lighter,
         child: tabbedView,
       ),
     );

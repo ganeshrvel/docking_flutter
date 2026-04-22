@@ -664,9 +664,7 @@ class _TabContentWidgetState extends State<TabContentWidget>
   Widget build(BuildContext context) {
     super.build(context);
     final textColor = FluentTheme.of(context).resources.textFillColorPrimary;
-    final accentColor = FluentTheme.of(context).accentColor;
-    final resolvedAccent =
-        accentColor.defaultBrushFor(FluentTheme.of(context).brightness);
+    final accentColor = FluentTheme.of(context).accentColor.lighter;
 
     return Center(
       child: Column(
@@ -692,12 +690,12 @@ class _TabContentWidgetState extends State<TabContentWidget>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.15),
-                border: Border.all(color: resolvedAccent, width: 1),
+                border: Border.all(color: accentColor, width: 1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 'Increment',
-                style: TextStyle(fontSize: 13, color: resolvedAccent),
+                style: TextStyle(fontSize: 13, color: accentColor),
               ),
             ),
           ),

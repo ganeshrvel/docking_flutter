@@ -13,9 +13,7 @@ mixin DraggableConfigMixin {
       required BuildContext context}) {
     DockingItem item = tabData.value;
     String name = item.name != null ? item.name! : '';
-    final Color accent = FluentTheme.of(context)
-        .accentColor
-        .defaultBrushFor(FluentTheme.of(context).brightness);
+    final Color accent = FluentTheme.of(context).accentColor.lighter;
     return DraggableConfig(
         feedback: buildFeedback(name, accent),
         dragAnchorStrategy: (Draggable<Object> draggable, BuildContext context,
