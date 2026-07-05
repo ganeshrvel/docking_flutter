@@ -646,6 +646,38 @@ class DockingLayout extends ChangeNotifier {
     return null;
   }
 
+  /// Returns the active DockingItem for each DockingTabs pane in the layout,
+  /// in traversal order.
+  List<DockingItem> activeItemsPerPane() {
+    return layoutAreas()
+        .whereType<DockingTabs>()
+        .where((pane) => pane.childrenCount > 0)
+        .map((pane) => pane.childAt(pane.selectedIndex))
+        .toList();
+  }
+
+  /// Returns the DockingTabs pane adjacent to the one containing [itemId],
+  /// or null if [itemId] isn't found or there's only one pane.
+  ///
+  /// "Adjacent" here means the next pane in layoutAreas() traversal order,
+  /// wrapping around. This is a structural notion, not a spatial one — it
+  /// does not account for visual left/right/up/down positioning.
+  DockingTabs? adjacentPaneTo(dynamic itemId, {bool forward = true}) {
+    final currentPane = findDockingTabsWithItem(itemId);
+    if (currentPane == null) {
+      return null;
+    }
+
+    final allPanes = layoutAreas().whereType<DockingTabs>().toList();
+    if (allPanes.length < 2) {
+      return null;
+    }
+
+    final currentIndex = allPanes.indexOf(currentPane);
+    final nextIndex = (currentIndex + (forward ? 1 : -1)) % allPanes.length;
+    return allPanes[(nextIndex + allPanes.length) % allPanes.length];
+  }
+
   /// Maximize a [DockingItem].
   void maximizeDockingItem(DockingItem dockingItem) {
     if (dockingItem.layoutId != id) {

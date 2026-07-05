@@ -67,9 +67,11 @@ packages:
   fluent_ui:
     dependency: "direct main"
     description:
-      path: "../../fluent_ui"
-      relative: true
-    source: path
+      path: "."
+      ref: openmtp
+      resolved-ref: fcca1b91d6abbec10bbf4e647ef2a7ed29b49a37
+      url: "https://github.com/ganeshrvel/fluent_ui.git"
+    source: git
     version: "4.13.0"
   flutter:
     dependency: "direct main"
@@ -143,10 +145,10 @@ packages:
     dependency: transitive
     description:
       name: matcher
-      sha256: dc0b7dc7651697ea4ff3e69ef44b0407ea32c487a39fff6a4004fa585e901861
+      sha256: "31bd099b47c10cd1aeb55146a2d46ce0277630ecef3f7dae54ad7873f36696cd"
       url: "https://pub.dev"
     source: hosted
-    version: "0.12.19"
+    version: "0.12.20"
   material_color_utilities:
     dependency: transitive
     description:
@@ -167,10 +169,10 @@ packages:
     dependency: transitive
     description:
       name: meta
-      sha256: "1741988757a65eb6b36abe716829688cf01910bbf91c34354ff7ec1c3de2b349"
+      sha256: c82594181e3312f3d0695fc95aaaf7758d75b8d4ae2bbecf223b9fd5109a059d
       url: "https://pub.dev"
     source: hosted
-    version: "1.18.0"
+    version: "1.18.3"
   multi_split_view:
     dependency: transitive
     description:
@@ -265,11 +267,13 @@ packages:
     source: hosted
     version: "0.0.4"
   tabbed_view:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../../tabbed_view"
-      relative: true
-    source: path
+      path: "."
+      ref: openmtp
+      resolved-ref: "05ff12e4737a1fa99bed7527b44e31d1aa16835f"
+      url: "https://github.com/ganeshrvel/tabbed_view.git"
+    source: git
     version: "1.18.1"
   term_glyph:
     dependency: transitive
@@ -283,18 +287,18 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"
+      sha256: "2a122cbe059f8b610d3a5415f42e255b6c17b1f21eee1d960f31080237fb4f11"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.10"
+    version: "0.7.12"
   vector_math:
     dependency: transitive
     description:
       name: vector_math
-      sha256: d530bd74fea330e6e364cda7a85019c434070188383e1cd8d9777ee586914c5b
+      sha256: "1d774bbdf6b72a0b12122fc1560c9c2d2a67db5a4a4cc2bd8a5c990ab20e3188"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.0"
+    version: "2.4.0"
   vm_service:
     dependency: transitive
     description:
@@ -312,5 +316,5 @@ packages:
     source: hosted
     version: "1.1.1"
 sdks:
-  dart: ">=3.10.0-0 <4.0.0"
-  flutter: ">=3.18.0-18.0.pre.54"
+  dart: ">=3.10.0 <4.0.0"
+  flutter: ">=3.32.0"
