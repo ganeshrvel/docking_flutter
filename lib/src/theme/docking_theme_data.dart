@@ -1,6 +1,6 @@
 import 'package:docking/src/docking_icons.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 
 /// The [Docking] theme.

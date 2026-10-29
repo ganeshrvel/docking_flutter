@@ -13,7 +13,7 @@ import 'package:docking/src/theme/docking_theme.dart';
 import 'package:docking/src/theme/docking_theme_data.dart';
 import 'package:fluent_ui/fluent_ui.dart' show FluentTheme;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 

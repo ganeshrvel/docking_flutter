@@ -1,0 +1,7 @@
+# Points the fork dependencies at their sibling folders in the openmtp-phantom-workspace monorepo.
+
+dependency_overrides:
+  fluent_ui:
+    path: ../fluent_ui
+  tabbed_view:
+    path: ../tabbed_view

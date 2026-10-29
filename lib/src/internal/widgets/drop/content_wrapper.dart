@@ -1,7 +1,7 @@
 import 'package:docking/src/internal/widgets/drop/drop_anchor_widget.dart';
 import 'package:docking/src/layout/docking_layout.dart';
 import 'package:docking/src/layout/drop_position.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:meta/meta.dart';
 
 @internal

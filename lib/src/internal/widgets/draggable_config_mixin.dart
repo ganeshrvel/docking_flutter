@@ -1,7 +1,7 @@
 import 'package:docking/src/drag_over_position.dart';
 import 'package:docking/src/layout/docking_layout.dart';
 import 'package:fluent_ui/fluent_ui.dart' show FluentTheme;
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:meta/meta.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 
